@@ -11,6 +11,7 @@ st.set_page_config(page_title="Nifty 500 Sniper v18.0", layout="wide")
 
 @st.cache_resource
 def load_oracle_ai():
+    # FinBERT - Optimized for Financial Nuance
     return pipeline("sentiment-analysis", model="ProsusAI/finbert")
 
 # --- 2. THE SNIPER ENGINES ---
@@ -31,62 +32,76 @@ def get_whale_score(ticker):
     try:
         data = yf.download(symbol, period="60d", interval="1d", progress=False)
         if data.empty: return 0
+        
+        # Metric 1: Volume Momentum (7d Avg vs 30d Avg)
         vol_7d = data['Volume'].tail(7).mean()
         vol_30d = data['Volume'].tail(30).mean()
         vol_ratio = vol_7d / vol_30d
+        
+        # Metric 2: Price Strength (Current vs 20d SMA)
         current_price = data['Close'].iloc[-1]
         sma_20 = data['Close'].rolling(20).mean().iloc[-1]
+        
+        # Scoring: 60% Volume weight, 40% Price Trend
         score = (vol_ratio * 60) + (40 if current_price > sma_20 else 10)
         return round(min(score, 100), 2)
     except:
         return 0
 
 def fetch_deep_truth(ticker):
+    """Automated Deep Scan: News -> Corporate Profile -> Error."""
     try:
         stock = yf.Ticker(f"{ticker.upper()}.NS")
         news = stock.news
+        
+        # Priority 1: Live News (Dynamic Reality)
         if news and len(news) > 0:
             content = " ".join([n.get('title', '') + ". " + n.get('summary', '') for n in news[:3]])
             if len(content) > 100:
-                return content, "Live News Feed"
+                return content, "Live News Feed (Dynamic)"
+
+        # Priority 2: Business Summary (Static Baseline)
         summary = stock.info.get('longBusinessSummary', "")
         if len(summary) > 100:
-            return summary, "Official Corporate Profile"
-        return None, "Insufficient data."
+            return summary, "Official Corporate Profile (Static)"
+            
+        return None, "Insufficient data across all web channels."
     except:
-        return None, "Connection error."
+        return None, "Connection error to NSE/Yahoo data stream."
 
 # --- 3. THE UI ARCHITECTURE ---
 
 st.title("🏹 Nifty 500 Sniper: The Oracle v18.0")
-st.markdown(f"**Market Status:** Active Monitoring | **System Date:** {datetime.now().strftime('%Y-%m-%d')}")
+st.markdown(f"**Status:** Institutional Mode Active | **System Date:** {datetime.now().strftime('%Y-%m-%d')}")
 st.markdown("---")
 
-tab1, tab2 = st.tabs(["🐋 Whale Radar (Pre-Earnings)", "🔍 Deep Scan Truth-Meter"])
+tab1, tab2 = st.tabs(["🐋 Whale Radar (Pre-Earnings)", "🔍 Automated Truth-Meter (Post-Earnings)"])
 
+# --- TAB 1: WHALE RADAR ---
 with tab1:
     col_l, col_r = st.columns([1, 2])
     with col_l:
         st.subheader("Target Selection")
-        target = st.text_input("Enter NSE Ticker:", "").upper()
+        target = st.text_input("Enter NSE Ticker (e.g. RELIANCE, TCS):", "").upper()
         if st.button("Run Sniper Scan"):
             if target:
                 with st.spinner(f"Analyzing {target}..."):
                     score = get_whale_score(target)
                     st.metric(f"{target} Whale Score", f"{score}/100")
-                    if score > 85: st.success("🔥 WHISPER ALERT: Institutional Accumulation.")
+                    if score > 85: st.success("🔥 WHISPER ALERT: Strong Institutional Accumulation.")
                     elif score > 60: st.info("⚖️ ACCUMULATION: Steady institutional buying.")
                     else: st.warning("⚠️ RETAIL NOISE: No significant Whale footprints.")
             else:
                 st.error("Please enter a ticker.")
     with col_r:
-        st.subheader("Official NSE Calendar (T-15)")
+        st.subheader("Official NSE Calendar (T-15 Window)")
         calendar = get_nifty_500_calendar()
         if not calendar.empty:
             st.dataframe(calendar[['SYMBOL', 'BOARD_MEETING_DATE', 'PURPOSE']], use_container_width=True)
         else:
             st.info("The NSE board meeting calendar is currently quiet.")
 
+# --- TAB 2: DEEP SCAN TRUTH-METER ---
 with tab2:
     st.header("Automated Deep Scan Audit")
     audit_target = st.text_input("Enter Ticker for Linguistic Audit:", "RELIANCE").upper()
@@ -101,22 +116,23 @@ with tab2:
                 st.subheader(f"Data Found ({source_info})")
                 st.info(truth_text)
                 
+                # AI & Readability Audit
                 oracle_ai = load_oracle_ai()
                 sentiment = oracle_ai(truth_text[:512])[0]
                 
-                # Nifty Sniper Normalization Logic
+                # Normalize Transparency (0-100)
                 raw_ease = textstat.flesch_reading_ease(truth_text)
-                # We adjust the score for industrial companies that list many products
-                if "Source: Official Corporate Profile" in source_info:
-                    raw_ease += 10 # Providing a 'Technical Grace' for industrial lists
-                
                 transparency = max(0, min(100, raw_ease))
                 
                 c1, c2 = st.columns(2)
                 c1.metric("Management Tone", sentiment['label'], f"{round(sentiment['score']*100, 1)}% AI Confidence")
                 c2.metric("Transparency Index", f"{round(transparency, 2)}/100")
                 
-                if transparency < 35:
+                # --- EXPERT LOGIC ---
+                if "Static" in source_info:
+                    st.warning("⚠️ PRO-TIP: This is static profile data. Linguistic obfuscation here is common due to technical part lists. Wait for 'Dynamic' news for a high-conviction audit.")
+                
+                if transparency < 30:
                     st.error("🚩 CRITICAL: High Linguistic Obfuscation. High risk of Management Decay.")
                 elif transparency > 65:
                     st.success("✅ CLEAN COMMS: High transparency detected.")
@@ -124,4 +140,4 @@ with tab2:
                     st.info("⚖️ NEUTRAL: Communication is within standard institutional ranges.")
 
 st.markdown("---")
-st.caption("Oracle v18.0 | Deep Scan Mode | Industrial Logic Normalization Active")
+st.caption("Oracle v18.0 | Deep Scan Mode | Institutional Intelligence Layer")
